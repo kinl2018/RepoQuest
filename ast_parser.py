@@ -14,7 +14,14 @@ def parse_file(path: Path):
     tree = ast.parse(source, filename=str(path))
     return find_functions(tree)
 
-def extract_symbols(node):
-    return []
+def extract_symbols(tree):
+    symbols = []
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef):
+            symbols.append({"kind": "class", "name": node.name})
+            for child in node.body:
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    symbols.append({"kind": "method", "name": f"{node.name}.{child.name}"})
+    return symbols
 
 
