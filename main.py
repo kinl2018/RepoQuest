@@ -16,13 +16,13 @@ if __name__ == '__main__':
     for f in files:
         print(f"文件：{f.relative_to(current_path)}")
         try:
-            functions = parse_file(f)
+            symbols = parse_file(f)
         except (OSError, UnicodeDecodeError, SyntaxError) as e:
             print(f"解析失败：{e}")
             continue
-        if not functions:
-            print("暂无函数定义")
-        for function in functions:
-            print(f"name: {function['name']}, lineno: {function['lineno']}")
+        if not symbols:
+            print("暂无类或函数定义")
+        for symbol in symbols:
+            print(f"{symbol['kind']}: {symbol['name']} (第{symbol['lineno']}行)")
     print("Python文件总数：", end='')
     print(len(files))

@@ -1,5 +1,5 @@
 import ast
-from ast_parser import extract_symbols
+from ast_parser import *
 
 def test_class_methods():
     code = """
@@ -27,6 +27,24 @@ class Student:
     result = extract_symbols(tree)
 
     assert result == [
+        {"name": "Student", "kind": "class"},
+        {"name": "Student.run", "kind": "method"}
+    ]
+
+def test_top_level_function():
+    code = """
+def hello():
+    pass
+
+class Student:
+    def run(self):
+        pass
+"""
+    tree = ast.parse(code)
+    result = extract_symbols(tree)
+
+    assert result == [
+        {"name": "hello", "kind": "function"},
         {"name": "Student", "kind": "class"},
         {"name": "Student.run", "kind": "method"}
     ]
