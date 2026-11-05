@@ -14,3 +14,19 @@ class Student:
         {"name": "Student", "kind": "class"},
         {"name": "Student.run", "kind": "method"}
     ]
+
+def test_class_attribute_not_method():
+    code = """
+class Student:
+    age = 18
+
+    def run(self):
+        pass
+"""
+    tree = ast.parse(code)
+    result = extract_symbols(tree)
+
+    assert result == [
+        {"name": "Student", "kind": "class"},
+        {"name": "Student.run", "kind": "method"}
+    ]
