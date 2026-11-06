@@ -4,7 +4,19 @@ from pathlib import Path
 def parse_file(path: Path):
     source = path.read_text(encoding="utf-8")
     tree = ast.parse(source, filename=str(path))
-    return visit(tree), extract_imports(tree)
+    return visit(tree), extract_imports(tree), extract_import_details(tree)
+
+def parse_files(files: list[Path]):
+    results = {}
+    errors = {}
+    for file in files:
+        try:
+            symbols, imports, import_details = parse_file(file)
+        except (OSError, UnicodeDecodeError, SyntaxError) as e:
+            errors[file] = e
+            continue
+        results[file] = {"symbols": symbols, "imports": imports, "import_details": import_details}
+    return results, errors
 
 def visit(node, scope="", parent_kind="module"):
     symbols = []
@@ -37,6 +49,9 @@ def extract_import_details(tree):
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom):
             details.append({"module": node.module, "level": node.level, "names": [alias.name for alias in node.names]})
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                details.append({"module": alias.name, "level": 0, "names": []})
     return details
 
 def find_functions(node):
