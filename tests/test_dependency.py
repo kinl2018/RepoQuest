@@ -106,3 +106,178 @@ def test_find_relative_dependency(tmp_path):
 
     assert result == [target]
 
+def test_find_absolute_dependency(tmp_path):
+    # 1. 创建 services 目录
+    services = tmp_path / "services"
+    services.mkdir()
+    # 2. 创建被导入的 utils.py
+    target = services / "utils.py"
+    target.write_text("def helper(): pass", encoding="utf-8")
+    # 3. 创建 main.py，使用绝对导入
+    source = tmp_path / "main.py"
+    source.write_text("from services.utils import helper", encoding="utf-8")
+    # 4. 检查是否找到依赖
+    result = find_local_dependencies(tmp_path, source)
+    assert result == [target]
+
+def test_find_normal_import_dependency(tmp_path):
+    services = tmp_path / "services"
+    services.mkdir()
+
+    target = services / "utils.py"
+    target.write_text("", encoding="utf-8")
+
+    source = tmp_path / "main.py"
+    source.write_text(
+        "import services.utils",
+        encoding="utf-8"
+    )
+
+    result = find_local_dependencies(tmp_path, source)
+
+    assert result == [target]
+
+def test_find_relative_import_without_module(tmp_path):
+    services = tmp_path / "services"
+    services.mkdir()
+
+    (services / "__init__.py").write_text("", encoding="utf-8")
+
+    source = services / "matcher.py"
+    source.write_text(
+        "from . import config",
+        encoding="utf-8"
+    )
+
+    target = services / "config.py"
+    target.write_text(
+        "DEBUG = True",
+        encoding="utf-8"
+    )
+
+    result = find_local_dependencies(tmp_path, source)
+
+    assert result == [target]
+
+
+from dependency import build_dependency_edges
+
+def test_build_dependency_edges(tmp_path):
+    services = tmp_path / "services"
+    services.mkdir()
+
+    # 被依赖文件
+    target = services / "utils.py"
+    target.write_text(
+        "def helper(): pass",
+        encoding="utf-8"
+    )
+
+    # 第一个源文件：绝对导入
+    main = tmp_path / "main.py"
+    main.write_text(
+        "import services.utils",
+        encoding="utf-8"
+    )
+
+    # 第二个源文件：相对导入
+    matcher = services / "matcher.py"
+    matcher.write_text(
+        "from .utils import helper",
+        encoding="utf-8"
+    )
+
+    files = [main, matcher, target]
+
+    result = build_dependency_edges(tmp_path, files)
+
+    assert result == [
+        (main, target),
+        (matcher, target)
+    ]
+
+
+def test_build_dependency_edges_no_duplicates(tmp_path):
+    target = tmp_path / "utils.py"
+    target.write_text("", encoding="utf-8")
+
+    source = tmp_path / "main.py"
+    source.write_text(
+        "import utils\n"
+        "from utils import helper\n",
+        encoding="utf-8"
+    )
+
+    files = [source, target]
+    result = build_dependency_edges(tmp_path, files)
+
+    assert result == [(source, target)]
+
+
+def test_build_edges_with_broken_file(tmp_path):
+    # 被依赖的正常文件
+    target = tmp_path / "utils.py"
+    target.write_text("", encoding="utf-8")
+
+    # 正常文件
+    good = tmp_path / "good.py"
+    good.write_text("import utils", encoding="utf-8")
+
+    # 存在语法错误的文件
+    bad = tmp_path / "bad.py"
+    bad.write_text("def broken(", encoding="utf-8")
+
+    result = build_dependency_edges(
+        tmp_path, [bad, good, target]
+    )
+
+    assert result == [(good, target)]
+
+
+from dependency import find_dependencies_from_details
+
+def test_find_dependencies_from_details(tmp_path):
+    target = tmp_path / "utils.py"
+    target.write_text("", encoding="utf-8")
+
+    source = tmp_path / "main.py"
+    source.write_text("import utils", encoding="utf-8")
+
+    # 模拟 parse_files() 已经提取好的数据
+    details = [
+        {
+            "module": "utils",
+            "level": 0,
+            "names": []
+        }
+    ]
+
+    result = find_dependencies_from_details(
+        tmp_path, source, details
+    )
+
+    assert result == [target]
+
+
+
+from dependency import build_dependency_edges_from_results
+
+def test_build_edges_from_results(tmp_path):
+    target = tmp_path / "utils.py"
+    target.write_text("", encoding="utf-8")
+
+    source = tmp_path / "main.py"
+
+    results = {
+        source: {
+            "import_details": [
+                {"module": "utils", "level": 0, "names": []}
+            ]
+        }
+    }
+
+    edges = build_dependency_edges_from_results(
+        tmp_path, results
+    )
+
+    assert edges == [(source, target)]

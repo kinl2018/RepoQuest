@@ -32,25 +32,55 @@ def file_to_module(root: Path, file: Path) -> str:
     return ".".join(relative.parts)
 
 def find_local_dependencies(root: Path, file: Path) -> list[Path]:
-    """
-    #input: root = tmp_path, file = tmp_path/services/matcher.py: from .utils import helper
-    file_to_module: services/matcher.py -> current_module = "services.matcher"
-    extract_import_details: -> imports_list = {"module": "utils", "level": 1, "names": ["helper"]}
-    resolve_relative_import: -> module_name = "services.utils"
-    resolve_local_module: -> target = tmp_path/services/utils.py
-    """
-    dependencies = []
     source = file.read_text(encoding="utf-8")
     tree = ast.parse(source, filename=str(file))
+    import_details = extract_import_details(tree)
+    return find_dependencies_from_details(root, file, import_details)
+
+def find_dependencies_from_details(root: Path, file: Path, import_details: list[dict]) -> list[Path]:
+    """
+        input: root = tmp_path, file = tmp_path/services/matcher.py: from .utils import helper
+        file_to_module: services/matcher.py -> current_module = "services.matcher"
+        extract_import_details: -> import_details = {"module": "utils", "level": 1, "names": ["helper"]}
+        resolve_relative_import: -> module_name = "services.utils"
+        resolve_local_module: -> target = tmp_path/services/utils.py
+        output: dependencies = [targets]
+    """
+    dependencies = []
     current_module = file_to_module(root, file)
-    imports_list = extract_import_details(tree)  # [{"module": node.module, "level": node.level, "names": [alias.name for alias in node.names]}]
-    for import_detail in imports_list:
-        if import_detail["level"] == 0 or import_detail["module"] is None:
-            continue
+    for import_detail in import_details:
         module_name = resolve_relative_import(current_module, import_detail["module"], import_detail["level"])
         if module_name is None:
             continue
-        target = resolve_local_module(root, module_name)
-        if target is not None:
-            dependencies.append(target)
+        if import_detail["module"] is not None:
+            target_file = resolve_local_module(root, module_name)
+            if target_file is not None:
+                dependencies.append(target_file)
+        else:  # from . import config -> "services.config" -> services/config.py
+            for name in import_detail["names"]:
+                target_file = resolve_local_module(root, f"{module_name}.{name}")
+                if target_file is not None:
+                    dependencies.append(target_file)
     return dependencies
+
+def build_dependency_edges_from_results(root: Path, results: dict) -> list[tuple[Path, Path]]:
+    # output: edges = [(Path("main.py"), Path("services/utils.py"))], 即 [(source1, target1),]
+    edges = []
+    for file, result in results.items():
+        dependencies = find_dependencies_from_details(root, file, import_details=result["import_details"])
+        edges.extend((file, dependency) for dependency in dependencies)
+    return sorted(set(edges))
+
+def build_dependency_edges(root: Path, files: list[Path]) -> list[tuple[Path, Path]]:
+    # output: edges = [(Path("main.py"), Path("services/utils.py"))], 即 [(source1, target1),]
+    edges = []
+    for file in files:
+        if not file.is_file():
+            continue
+        try:
+            dependencies = find_local_dependencies(root, file)
+            edges.extend((file, dependency) for dependency in dependencies)
+        except (OSError, UnicodeDecodeError, SyntaxError) as e:
+            print(f"文件解析失败：{e}")
+            continue
+    return sorted(set(edges))
