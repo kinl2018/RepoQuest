@@ -4,6 +4,7 @@ from ast_parser import parse_files
 from dependency import build_dependency_edges_from_results
 from graph_analysis import build_graph, find_cycles, save_graph, build_call_graph, save_call_graph
 from call_analysis import collect_call_edges
+from scanner import scan_python_files
 
 current_path = Path.cwd() if len(sys.argv) <= 1 else Path(sys.argv[1])
 if not current_path.exists():
@@ -12,9 +13,8 @@ if not current_path.exists():
 if not current_path.is_dir():
     print('指定路径不是目录')
     sys.exit(1)
-excluded = {".venv", "venv", "__pycache__", ".git", ".pytest_tmp"}
 print(f"项目路径: {current_path}")
-files = sorted([x for x in current_path.rglob("*.py") if not set(x.relative_to(current_path).parts) & excluded])
+files = scan_python_files(current_path)
 print(f"Python文件总数：{len(files)}")
 results, errors = parse_files(files)
 
