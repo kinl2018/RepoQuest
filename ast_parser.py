@@ -29,7 +29,8 @@ def visit(node, scope="", parent_kind="module"):
             symbols.extend(visit(child, scope, parent_kind))
         return symbols
     new_scope = f"{scope}.{node.name}" if scope else node.name
-    symbols.append({"name": new_scope, "kind": kind, "lineno": node.lineno})
+    start_lineno = min([node.lineno] + [d.lineno for d in node.decorator_list])
+    symbols.append({"name": new_scope, "kind": kind, "lineno": node.lineno, "start_lineno": start_lineno, "end_lineno": node.end_lineno})
     for child in node.body:
         symbols.extend(visit(child, new_scope, kind))
     return symbols

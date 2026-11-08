@@ -22,8 +22,13 @@ def save_graph(graph: nx.DiGraph, output: Path, root: Path | None = None):
     pos = nx.spring_layout(graph, seed=42)
     nx.draw(graph, pos=pos, with_labels=False, arrows=True, node_size=500, arrowsize=18)
     label_pos = {node: (x, y + 0.07) for node, (x, y) in pos.items()}
-    nx.draw_networkx_labels(graph, pos=label_pos, labels=labels, font_size=9)
-    plt.savefig(output, bbox_inches="tight")
+    if graph.number_of_nodes() == 1:
+        node = next(iter(graph.nodes))
+        x, y = pos[node]
+        plt.xlim(x - 0.5, x + 0.5)
+        plt.ylim(y - 0.25, y + 0.25)
+    nx.draw_networkx_labels(graph, pos=label_pos, labels=labels, font_size=10)
+    plt.savefig(output, format="svg", bbox_inches="tight")
     plt.close()
 
 def build_call_graph(edges: list[tuple]) -> nx.DiGraph:
@@ -42,7 +47,12 @@ def save_call_graph(graph: nx.DiGraph, output: Path, root: Path):
     plt.figure(figsize=(12, 8))
     nx.draw(graph, pos=pos, with_labels=False, arrows=True, node_size=500, arrowsize=18)
     label_pos = {node: (x, y + 0.07) for node, (x, y) in pos.items()}
-    nx.draw_networkx_labels(graph, pos=label_pos, labels=labels, font_size=9)
+    if graph.number_of_nodes() == 1:
+        node = next(iter(graph.nodes))
+        x, y = pos[node]
+        plt.xlim(x - 0.9, x + 0.9)
+        plt.ylim(y - 0.5, y + 0.5)
+    nx.draw_networkx_labels(graph, pos=label_pos, labels=labels, font_size=10)
     edge_labels = {}
     for source, target, data in graph.edges(data=True):
         lines = list(map(str, data["lines"]))
@@ -50,5 +60,5 @@ def save_call_graph(graph: nx.DiGraph, output: Path, root: Path):
         edge_labels[(source, target)] = label
     nx.draw_networkx_edge_labels(graph, pos, edge_labels=edge_labels, font_size=9, rotate=False)
     plt.axis("off")
-    plt.savefig(output, bbox_inches="tight")
+    plt.savefig(output, format="svg", bbox_inches="tight")
     plt.close()
