@@ -152,4 +152,59 @@ def collect_call_edges(root: Path, file: Path):
             source = (file, caller)
             target = (target_file, target_name)
             edges.add((source, target, lineno))
+    edges.update(extract_module_cross_file_calls(root, file))
     return sorted(edges)
+
+
+def extract_module_name_calls(file: Path) -> list[tuple[str, int]]:
+    source = file.read_text(encoding="utf-8")
+    tree = ast.parse(source, filename=str(file))
+    calls = []
+
+    def visit(node):
+        if isinstance(node, (
+            ast.FunctionDef,
+            ast.AsyncFunctionDef,
+            ast.ClassDef,
+            ast.Lambda
+        )):
+            return
+        if isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name):
+                calls.append((node.func.id, node.lineno))
+        for child in ast.iter_child_nodes(node):
+            visit(child)
+
+    visit(tree)
+    return calls
+
+def extract_module_cross_file_calls(root: Path, file: Path):
+    root = root.resolve()
+    file = file.resolve()
+    tree = ast.parse(file.read_text(encoding="utf-8"), filename=str(file))
+    imports = {}
+    for node in tree.body:
+        if not isinstance(node, ast.ImportFrom):
+            continue
+        if node.level != 0 or not node.module:
+            continue
+        target_file = resolve_local_module(root, node.module)
+        if target_file is None:
+            continue
+        for alias in node.names:
+            local_name = alias.asname or alias.name
+            imports[local_name] = (target_file.resolve(), alias.name)
+
+    calls = extract_module_name_calls(file)
+    edges = []
+    for name, lineno in calls:
+        if name not in imports:
+            continue
+        target_file, target_function = imports[name]
+        edges.append((
+            (file, "<module>"),
+            (target_file, target_function),
+            lineno
+        ))
+
+    return edges
