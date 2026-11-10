@@ -7,6 +7,10 @@ from dependency import build_dependency_edges_from_results
 from graph_analysis import build_graph, save_graph, build_call_graph, save_call_graph
 from call_analysis import collect_call_edges
 from agent_core import ask_repo
+from sentence_transformers import SentenceTransformer
+from rag_index import load_index
+from rag_bm25 import build_bm25
+from rag_hybrid import hybrid_search
 
 @st.cache_data
 def parse_cached(path: str, mtime_ns: int):
@@ -40,6 +44,10 @@ def show_tool_trace(trace):
                 st.json(result)
 
             st.divider()
+
+@st.cache_resource
+def load_embedding_model():
+    return SentenceTransformer("BAAI/bge-small-zh-v1.5", device="cpu")
 
 st.set_page_config(page_title="RepoQuest", layout="wide")
 st.title("RepoQuest")
@@ -106,11 +114,12 @@ with st.sidebar:
 if data is not None:
     root = data["root"]
     files = data["files"]
-tab_files, tab_deps, tab_calls, tab_ai = st.tabs([
+tab_files, tab_deps, tab_calls, tab_ai, tab_rag = st.tabs([
     "文件浏览",
     "模块依赖",
     "函数调用",
-    "AI 代码导游"
+    "AI 代码导游",
+    "RAG 检索"
 ])
 
 with tab_files:
@@ -492,3 +501,85 @@ with tab_ai:
 
         else:
             st.info("未找到 Python 文件")
+
+
+with tab_rag:
+    st.subheader("RAG 代码检索")
+
+    if data is None:
+        st.info("请先扫描仓库")
+    else:
+        root = data["root"]
+        index_dir = root / ".repoquest_index"
+
+        index_exists = (
+            (index_dir / "documents.json").is_file()
+            and (index_dir / "embeddings.npy").is_file()
+        )
+
+        if not index_exists:
+            st.warning("当前仓库尚未建立 RAG 索引")
+        else:
+            with st.form("rag_search_form"):
+                question = st.text_input(
+                    "请输入检索问题",
+                    placeholder="例如：get_callers"
+                )
+                submitted = st.form_submit_button("搜索源码")
+
+            if submitted:
+                if not question.strip():
+                    st.warning("请输入问题")
+                else:
+                    try:
+                        with st.spinner("正在检索相关源码..."):
+                            documents, embeddings = load_index(
+                                index_dir
+                            )
+
+                            model = load_embedding_model()
+                            bm25 = build_bm25(documents)
+
+                            results = hybrid_search(
+                                question,
+                                documents,
+                                embeddings,
+                                model,
+                                bm25,
+                                k=5
+                            )
+
+                            st.session_state["rag_results"] = {
+                                "root": str(root),
+                                "question": question,
+                                "results": results
+                            }
+
+                    except Exception as e:
+                        st.error(f"检索失败：{e}")
+
+            saved = st.session_state.get("rag_results")
+
+            if saved and saved["root"] == str(root):
+                st.caption(f"检索问题：{saved['question']}")
+
+                for rank, result in enumerate(
+                    saved["results"], start=1
+                ):
+                    meta = result["metadata"]
+
+                    with st.expander(
+                        f"Top {rank} · "
+                        f"{meta['file']}::{meta['name']}",
+                        expanded=(rank == 1)
+                    ):
+                        st.caption(
+                            f"L{meta['start_line']}-"
+                            f"{meta['end_line']} | "
+                            f"RRF: {result['score']:.6f}"
+                        )
+
+                        st.code(
+                            result["content"],
+                            language="python"
+                        )

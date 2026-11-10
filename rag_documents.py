@@ -8,11 +8,7 @@ def chunk_to_document(chunk: dict) -> Document:
         k: v for k, v in chunk.items()
         if k != "content"
     }
-
-    return Document(
-        page_content=chunk["content"],
-        metadata=metadata
-    )
+    return Document(page_content=chunk["content"], metadata=metadata)
 
 
 if __name__ == "__main__":
