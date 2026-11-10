@@ -65,3 +65,39 @@ def build_rag_context(root: Path, result: dict, documents: list, max_callers: in
 ```""")
     # 3. 将所有证据拼接为一个字符串
     return "\n\n".join(sections)
+
+
+def build_multi_rag_context(root: Path, results: list[dict], documents: list, max_results: int = 2, max_callers: int = 2) -> str:
+    if not results:
+        return ""
+    sections = []
+    seen = set()
+
+    # 添加源码证据，避免同一源码块重复出现
+    def add_code(meta, content, title):
+        key = (meta["file"], meta["start_line"], meta["end_line"])
+        if key in seen:
+            return
+        seen.add(key)
+        sections.append(
+            f"[证据 {len(seen)}：{title}]\n"
+            f"文件：{meta['file']}\n"
+            f"符号：{meta['name']}\n"
+            f"源码范围：L{meta['start_line']}-L{meta['end_line']}\n"
+            f"源码：\n```python\n{content}\n```"
+        )
+
+    # 1. 加入检索结果
+    for rank, result in enumerate(results[:max_results], start=1):
+        add_code(result["metadata"], result["content"], f"检索结果 Top-{rank}")
+    # 2. 对排名第一的结果做 AST 调用者扩展
+    expanded = expand_context(root, results[0])
+    for caller in expanded["callers"][:max_callers]:
+        sections.append(f"[AST 调用关系]\n"
+            f"调用关系：{caller['caller']} → {expanded['name']}\n"
+            f"调用位置：{caller['file']} L{caller['line']}")
+        caller_doc = find_caller_chunk(documents, caller)
+        if caller_doc is not None:
+            add_code(caller_doc.metadata, caller_doc.page_content, "AST 调用者源码")
+
+    return "\n\n".join(sections)
