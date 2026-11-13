@@ -1,5 +1,6 @@
 from pathlib import Path
 from repo_tools import get_callers
+import re
 
 def expand_context(root: Path, result: dict) -> dict:
     meta = result["metadata"]
@@ -101,3 +102,59 @@ def build_multi_rag_context(root: Path, results: list[dict], documents: list, ma
             add_code(caller_doc.metadata, caller_doc.page_content, "AST 调用者源码")
 
     return "\n\n".join(sections)
+
+
+def select_context_results(current_results: list[dict], evidence_history: list[dict], latest_k: int = 2, history_k: int = 2) -> list[dict]:
+    selected = []
+    seen = set()
+
+    def add_unique(result):
+        meta = result["metadata"]
+
+        key = (
+            meta["file"],
+            meta["name"],
+            meta["kind"],
+            meta["start_line"],
+            meta["end_line"]
+        )
+        if key in seen:
+            return False
+        seen.add(key)
+        selected.append(result)
+        return True
+
+    # 1. 优先保留本轮排名靠前的结果
+    for result in current_results[:latest_k]:
+        add_unique(result)
+    # 2. 从历史证据中补充不重复的结果
+    old_added = 0
+    for result in evidence_history:
+        if old_added >= history_k:
+            break
+        if add_unique(result):
+            old_added += 1
+    return selected
+
+def prioritize_explicit_symbol_hits(results: list[dict], unresolved: list[dict]) -> list[dict]:
+    # 1. 收集未解决问题及缺失原因
+    focus_text = "\n".join(item["question"] + "\n" + item["reason"] for item in unresolved)
+    priority = []
+    normal = []
+    # 2. 检查检索结果的符号名
+    for result in results:
+        meta = result["metadata"]
+        full_name = str(meta.get("name", ""))
+        # 兼容 build_graph.context_node 等嵌套符号
+        symbol_name = full_name.split(".")[-1]
+        # 排除 <module> 等非函数标识符
+        if not symbol_name.isidentifier():
+            normal.append(result)
+            continue
+        # 3. 在缺失原因中寻找完整函数名
+        pattern = rf"(?<![A-Za-z0-9_]){re.escape(symbol_name)}(?![A-Za-z0-9_])"
+        if re.search(pattern, focus_text):
+            priority.append(result)
+        else:
+            normal.append(result)
+    return priority + normal

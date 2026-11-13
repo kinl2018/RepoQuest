@@ -7,12 +7,12 @@ from query_rewriter import rewrite_query
 from context_expansion import build_multi_rag_context
 from grounded_qa import answer_with_context
 
-def retrieve_candidates(question, documents, embeddings, model, bm25, k=5):
+def retrieve_candidates(question, documents, embeddings, model, bm25, k=5, rewritten_question=None):
     if not question.strip():
         raise ValueError("问题不能为空")
 
     # 1. LLM 改写查询
-    rewritten = rewrite_query(question)
+    rewritten = rewritten_question if rewritten_question is not None else rewrite_query(question)
     # 2. 分别检索原始查询和改写查询
     candidate_k = 40
     search_k = candidate_k * 2

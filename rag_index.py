@@ -27,3 +27,16 @@ def load_index(index_dir: Path):
         raise ValueError("Document 与 Embedding 数量不一致")
 
     return documents, embeddings
+
+def get_index_metadata(index_dir: Path) -> dict:
+    vector_path = index_dir / "embeddings.npy"
+    if not vector_path.is_file():
+        raise FileNotFoundError("Embedding 索引文件不存在")
+    # 只读取数组元信息，不必加载完整向量矩阵
+    embeddings = np.load(vector_path, mmap_mode="r", allow_pickle=False)
+    if embeddings.ndim != 2:
+        raise ValueError("Embedding 矩阵必须是二维数组")
+    return {
+        "embedding_count": int(embeddings.shape[0]),
+        "embedding_dimension": int(embeddings.shape[1])
+    }
