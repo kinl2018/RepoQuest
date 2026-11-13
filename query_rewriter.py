@@ -92,6 +92,49 @@ def rewrite_query(question: str) -> str:
 
     return rewritten.strip()
 
+def rewrite_retry_query(question: str, previous_query: str, reason: str) -> str:
+    system_prompt = """
+你是 RepoQuest 的代码检索优化助手。
+
+此前的代码检索未能找到足够的证据。
+请根据 Evidence Grader 提供的证据不足原因，
+重新制定一条更有针对性的检索查询。
+
+要求：
+1. 保留用户原始问题的核心目标。
+2. 重点搜索之前缺失的信息。
+3. 避免简单重复上一轮查询。
+4. 如果缺少函数实现，优先搜索函数定义和内部逻辑。
+5. 保留用户提供的函数名、类名等标识符。
+6. 不要编造仓库中存在的函数或文件。
+7. 不要直接回答问题。
+8. 只输出一条检索查询，不要附加解释。
+"""
+
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {
+                "role": "system",
+                "content": system_prompt
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"原始问题：\n{question}\n\n"
+                    f"上一轮查询：\n{previous_query}\n\n"
+                    f"证据不足原因：\n{reason}"
+                )
+            }
+        ],
+        timeout=120.0
+    )
+
+    query = response.choices[0].message.content
+    if not query or not query.strip():
+        raise RuntimeError("Retry Query Rewriter 返回空结果")
+    return query.strip()
+
 
 if __name__ == "__main__":
     question = input("请输入原始问题：").strip()
