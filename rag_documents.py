@@ -1,6 +1,4 @@
-from pathlib import Path
 from langchain_core.documents import Document
-from code_chunker import chunk_repo
 
 
 def chunk_to_document(chunk: dict) -> Document:

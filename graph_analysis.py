@@ -1,5 +1,7 @@
 import networkx as nx
 from pathlib import Path
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 def build_graph(files: list[Path], edges: list[tuple[Path, Path]]) -> nx.DiGraph:
@@ -28,7 +30,7 @@ def save_graph(graph: nx.DiGraph, output: Path, root: Path | None = None):
         plt.xlim(x - 0.5, x + 0.5)
         plt.ylim(y - 0.25, y + 0.25)
     nx.draw_networkx_labels(graph, pos=label_pos, labels=labels, font_size=10)
-    plt.savefig(output, format="svg", bbox_inches="tight")
+    plt.savefig(output, bbox_inches="tight")
     plt.close()
 
 def build_call_graph(edges: list[tuple]) -> nx.DiGraph:
@@ -60,5 +62,5 @@ def save_call_graph(graph: nx.DiGraph, output: Path, root: Path):
         edge_labels[(source, target)] = label
     nx.draw_networkx_edge_labels(graph, pos, edge_labels=edge_labels, font_size=9, rotate=False)
     plt.axis("off")
-    plt.savefig(output, format="svg", bbox_inches="tight")
+    plt.savefig(output, bbox_inches="tight")
     plt.close()

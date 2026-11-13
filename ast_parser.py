@@ -55,14 +55,6 @@ def extract_import_details(tree):
                 details.append({"module": alias.name, "level": 0, "names": []})
     return details
 
-def find_functions(node):
-    functions = []
-    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-        functions.append({"name": node.name, "lineno": node.lineno})
-    for child in ast.iter_child_nodes(node):
-        functions.extend(find_functions(child))
-    return functions
-
 def extract_symbols(tree):
     symbols = []
     for node in tree.body:

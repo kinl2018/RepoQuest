@@ -1,12 +1,9 @@
 import re
-from pathlib import Path
 
 import jieba
 import numpy as np
 from rank_bm25 import BM25Okapi
 
-from code_chunker import chunk_repo
-from rag_documents import chunk_to_document
 
 
 # 提取英文标识符、中文文本和数字
@@ -34,18 +31,22 @@ def tokenize(text: str) -> list[str]:
 
 
 def build_bm25(documents):
+    if not documents:
+        raise ValueError("BM25 语料不能为空")
     corpus = []
 
     for doc in documents:
         meta = doc.metadata
         # 将 Metadata 和源码一起用于关键词检索
         text = (f"{meta['file']} {meta['name']} {meta['kind']} {doc.page_content}")
-        corpus.append(tokenize(text))
+        corpus.append(tokenize(text) or ["<empty>"])
 
     return BM25Okapi(corpus)
 
 
 def bm25_search(query, documents, bm25, k=3):
+    if k <= 0:
+        raise ValueError("k 必须大于 0")
     query_tokens = tokenize(query)
     # 计算查询与所有文档的 BM25 分数
     scores = bm25.get_scores(query_tokens)

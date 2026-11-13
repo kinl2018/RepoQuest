@@ -1,5 +1,5 @@
-from agent_core import client, MODEL
-from evidence_grader import parse_grader_json
+from llm_runtime import complete
+from structured_output import parse_grader_json
 
 
 SYSTEM_PROMPT = """
@@ -53,8 +53,7 @@ def parse_subquestions(raw: str) -> list[dict]:
 def decompose_question(question: str) -> list[dict]:
     if not question.strip():
         raise ValueError("用户问题不能为空")
-    response = client.chat.completions.create(
-        model=MODEL,
+    response = complete(
         messages=[
             {
                 "role": "system",
