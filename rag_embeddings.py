@@ -1,12 +1,11 @@
 from pathlib import Path
 import numpy as np
-from sentence_transformers import SentenceTransformer
 from code_chunker import chunk_repo
 from rag_documents import chunk_to_document
 
-def embed_repo(root: Path, model: SentenceTransformer):
+def embed_repo(root: Path, model, **chunk_options):
     # 1. 扫描仓库并生成 CodeChunk
-    chunks, errors = chunk_repo(root)
+    chunks, errors = chunk_repo(root, **chunk_options)
     # 2. 转换为 LangChain Document
     documents = [chunk_to_document(chunk) for chunk in chunks]
     if not documents:

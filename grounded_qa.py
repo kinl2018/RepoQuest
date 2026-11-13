@@ -1,4 +1,4 @@
-from agent_core import client, MODEL
+from llm_runtime import complete
 
 SYSTEM_PROMPT = """
 你是 RepoQuest 的 Python 代码仓库分析助手。
@@ -8,7 +8,8 @@ SYSTEM_PROMPT = """
 规则：
 1. 只根据源码证据做出确定性结论。
 2. 不要编造不存在的函数、调用关系或实现细节。
-3. 回答时引用文件名和行号范围。
+3. 回答时使用 [relative/path.py:L12-L24] 格式引用文件名和真实行号范围。
+   索引元数据等非源码事实使用 [index_metadata] 或提供的工具证据 ID。
 4. 如果证据不足，明确说明无法确定。
 5. 区分函数自身的功能与其他函数的功能。
 6. 使用中文回答，解释清楚。
@@ -20,8 +21,7 @@ def answer_with_context(question: str, context: str) -> str:
         raise ValueError("问题不能为空")
     if not context.strip():
         raise ValueError("检索上下文不能为空")
-    response = client.chat.completions.create(
-        model=MODEL,
+    response = complete(
         messages=[
             {
                 "role": "system",
