@@ -1,0 +1,30 @@
+{"id":"q01","question":"parse_file() 在哪里定义？","relevant":[{"file":"ast_parser.py","name":"parse_file"}]}
+{"id":"q02","question":"哪个函数负责批量解析 Python 源码并记录错误？","relevant":[{"file":"ast_parser.py","name":"parse_files"}]}
+{"id":"q03","question":"如何递归提取带作用域的函数、类和行号？","relevant":[{"file":"ast_parser.py","name":"visit"}]}
+{"id":"q04","question":"scan_python_files 如何排除虚拟环境和符号链接？","relevant":[{"file":"scanner.py","name":"scan_python_files"}]}
+{"id":"q05","question":"如何区分生产源码、测试代码和演示脚本？","relevant":[{"file":"scanner.py","name":"source_category"}]}
+{"id":"q06","question":"chunk_file 如何按 AST 提取函数源码？","relevant":[{"file":"code_chunker.py","name":"chunk_file"}]}
+{"id":"q07","question":"如何提取模块级语句代码块？","relevant":[{"file":"code_chunker.py","name":"chunk_module"}]}
+{"id":"q08","question":"超长函数如何按行分块并保留重叠？","relevant":[{"file":"code_chunker.py","name":"split_long_chunk"}]}
+{"id":"q09","question":"chunk_repo 如何过滤演示和测试文件？","relevant":[{"file":"code_chunker.py","name":"chunk_repo"}]}
+{"id":"q10","question":"build_symbol_index 是否收录类和方法短名？","relevant":[{"file":"symbol_index.py","name":"build_symbol_index"}]}
+{"id":"q11","question":"exact_symbol_search 如何精确查找多个函数？","relevant":[{"file":"symbol_index.py","name":"exact_symbol_search"}]}
+{"id":"q12","question":"精确检索和混合检索结果如何合并去重？","relevant":[{"file":"symbol_index.py","name":"merge_retrieval_results"}]}
+{"id":"q13","question":"BM25 如何拆分下划线标识符和中文分词？","relevant":[{"file":"rag_bm25.py","name":"tokenize"}]}
+{"id":"q14","question":"build_bm25 使用哪些源码元数据？","relevant":[{"file":"rag_bm25.py","name":"build_bm25"}]}
+{"id":"q15","question":"reciprocal_rank_fusion 如何根据排名融合多个检索结果？","relevant":[{"file":"retrieval.py","name":"reciprocal_rank_fusion"}]}
+{"id":"q16","question":"Retriever.search 如何执行混合检索？","relevant":[{"file":"retrieval.py","name":"Retriever.search"}]}
+{"id":"q17","question":"向量检索如何归一化查询并检查维度？","relevant":[{"file":"retrieval.py","name":"Retriever._vector"}]}
+{"id":"q18","question":"如何通过调用图扩展检索证据？","relevant":[{"file":"retrieval.py","name":"Retriever.related"}]}
+{"id":"q19","question":"merge_evidence 如何累积并去重跨轮证据？","relevant":[{"file":"evidence_store.py","name":"merge_evidence"}]}
+{"id":"q20","question":"calculate_novelty 如何计算新增证据比例？","relevant":[{"file":"evidence_store.py","name":"calculate_novelty"}]}
+{"id":"q21","question":"build_context 如何保留关键证据并限制上下文预算？","relevant":[{"file":"context_expansion.py","name":"build_context"}]}
+{"id":"q22","question":"build_multi_rag_context 和 merge_evidence 分别在哪里？","relevant":[{"file":"context_expansion.py","name":"build_multi_rag_context"},{"file":"evidence_store.py","name":"merge_evidence"}]}
+{"id":"q23","question":"Planner 如何选择源码搜索或索引元数据工具？","relevant":[{"file":"repo_agent.py","name":"plan_investigation"}]}
+{"id":"q24","question":"Agent 如何执行并校验工具参数？","relevant":[{"file":"agent_tools.py","name":"execute_tool"}]}
+{"id":"q25","question":"parse_subquestion_grades 如何拒绝虚构证据 ID？","relevant":[{"file":"subquestion_grader.py","name":"parse_subquestion_grades"}]}
+{"id":"q26","question":"run_investigation 如何保存和恢复调查 checkpoint？","relevant":[{"file":"repo_service.py","name":"run_investigation"}]}
+{"id":"q27","question":"source_fingerprint 如何检测源码变化？","relevant":[{"file":"rag_index.py","name":"source_fingerprint"}]}
+{"id":"q28","question":"如果修改某函数，如何找到直接和间接调用者及路径？","relevant":[{"file":"impact_analysis.py","name":"analyze_impact"}]}
+{"id":"q29","question":"audit_citations 如何验证引用行号真实且在 Context 中？","relevant":[{"file":"evaluation.py","name":"audit_citations"}]}
+{"id":"q30","question":"Streamlit 的 AST 解析缓存逻辑在哪里？","relevant":[{"file":"ui.py","name":"parse_cached"}]}

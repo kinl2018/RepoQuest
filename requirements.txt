@@ -1,0 +1,15 @@
+langgraph>=1.0,<2
+langgraph-checkpoint-sqlite>=3,<4
+langchain-core>=1.0,<2
+openai>=1.50,<3
+python-dotenv>=1,<2
+numpy>=1.26,<3
+faiss-cpu>=1.9,<2
+rank-bm25>=0.2.2,<0.3
+jieba>=0.42,<0.43
+networkx>=3,<4
+pydantic>=2.10,<3
+streamlit>=1.45,<2
+matplotlib>=3.8,<4
+sentence-transformers>=3,<7
+pytest>=8,<10
