@@ -8,10 +8,11 @@ import os
 from langgraph.checkpoint.sqlite import SqliteSaver
 from code_chunker import chunk_repo
 from rag_documents import chunk_to_document
-from rag_index import load_index, assert_current_index, read_manifest, source_fingerprint
+from rag_index import load_index, assert_current_index, read_manifest, source_fingerprint, save_index
 from retrieval import Retriever
 from repo_agent import build_graph
 from llm_runtime import begin_usage, end_usage
+from rag_embeddings import embed_repo
 
 
 def open_repository(root, *, use_vectors=False, include_tests=False, include_demos=False, model=None):
@@ -21,14 +22,14 @@ def open_repository(root, *, use_vectors=False, include_tests=False, include_dem
         load_dotenv(Path(__file__).with_name(".env"))
         model_name = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-zh-v1.5")
         index_dir = root / ".repoquest_index"
-        assert_current_index(root, index_dir, model_name)
-        documents, embeddings = load_index(index_dir)
-        manifest = read_manifest(index_dir)
-        if include_tests and not manifest["include_tests"] or include_demos and not manifest["include_demos"]:
-            raise ValueError("当前索引不包含测试/演示代码，请按所选范围重建")
         if model is None:
             from embedding_runtime import get_embedding_model
             model = get_embedding_model(model_name)
+        documents, embeddings = ensure_vector_index(
+            root, index_dir, model_name, model,
+            include_tests=include_tests,
+            include_demos=include_demos
+        )
     else:
         chunks, errors = chunk_repo(root, include_tests=include_tests, include_demos=include_demos)
         documents, embeddings = [chunk_to_document(c) for c in chunks], None
@@ -89,3 +90,38 @@ def run_investigation(retriever, question=None, *, thread_id=None, resume=False,
                      "parse_errors": retriever.parse_errors if hasattr(retriever, "parse_errors") else {}}
     (directory / f"run-{uuid4().hex}.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     return result
+
+
+def ensure_vector_index(root, index_dir, model_name, model, include_tests=False, include_demos=False):
+    # 1. 尝试复用已有索引
+    try:
+        assert_current_index(root, index_dir, model_name)
+        manifest = read_manifest(index_dir)
+        scope_ok = (
+            (not include_tests or manifest.get("include_tests", False))
+            and (not include_demos or manifest.get("include_demos", False))
+        )
+        if scope_ok:
+            return load_index(index_dir)
+    except (ValueError, FileNotFoundError, KeyError):
+        # 索引缺失、损坏或过期，转入重建流程
+        pass
+    # 2. 自动重建索引
+    print("检测到索引缺失或过期，正在自动重建...")
+    before = source_fingerprint(root, include_tests=include_tests, include_demos=include_demos)
+    documents, embeddings, errors = embed_repo(root, model, include_tests=include_tests, include_demos=include_demos)
+    if errors:
+        raise ValueError(f"源码解析失败，保留旧索引：{errors}")
+    # 防止构建过程中源码再次发生变化
+    after = source_fingerprint(root, include_tests=include_tests, include_demos=include_demos)
+    if before != after:
+        raise ValueError("构建过程中源码发生变化，请重试")
+    # 3. 保存新索引
+    save_index(
+        documents, embeddings, index_dir,
+        root=root,
+        model_name=model_name,
+        include_tests=include_tests,
+        include_demos=include_demos
+    )
+    return load_index(index_dir)
