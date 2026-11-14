@@ -6,12 +6,12 @@ from dotenv import load_dotenv
 
 if __name__ == "__main__":
     root = Path(__file__).resolve().parent
-    env_file = root / ".env"
     ui_file = root / "ui.py"
+    ''' 感觉llm非必需遂注释
+    env_file = root / ".env"
     if not env_file.is_file():
         print("[错误] 未找到 .env 配置文件，请在项目根目录创建 .env 并填写 LLM 配置。")
         sys.exit(1)
-    ''' 感觉llm非必需遂注释
     load_dotenv(env_file)
     missing = []
     for key in ["LLM_API_KEY", "LLM_BASE_URL", "LLM_MODEL"]:
